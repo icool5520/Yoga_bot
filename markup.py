@@ -1,7 +1,36 @@
 from telebot import types
-import db_cmd
 
 
+def gen_start_markup():
+    markup = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("Уроки", callback_data="lessons")
+    btn2 = types.InlineKeyboardButton("Расписание", callback_data="timetable")
+    btn3 = types.InlineKeyboardButton("Оплата", callback_data="payment")
+    markup.add(btn1,btn2)
+    markup.add(btn3)
+    return markup
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
 def gen_markup():
     markup = types.InlineKeyboardMarkup()
     categors = db_cmd.get_categors()
@@ -98,3 +127,5 @@ def buy(_id_product):
     markup.add(btn2)
     markup.add(btn3)
     return markup
+
+'''

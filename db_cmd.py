@@ -11,29 +11,16 @@ def create_tables():
 						state TEXT NOT NULL,
 						data TEXT NOT NULL)""")
 	with conn:
-		cur.execute(f"""CREATE TABLE IF NOT EXISTS products(
-						id INTEGER PRIMARY KEY NOT NULL,
-						name TEXT NOT NULL,
-						categors TEXT NOT NULL,
-						price INTEGER NOT NULL,
-						info TEXT NOT NULL,
-						img TEXT)""")
-	with conn:
-		cur.execute(f"""CREATE TABLE IF NOT EXISTS cart(
-						id INTEGER PRIMARY KEY NOT NULL,
-						user_id INTEGER NOT NULL,
-						list_buy TEXT NOT NULL,
-						amount INTEGER NOT NULL,
-						status TEXT NOT NULL)""")
-	with conn:
 		cur.execute(f"""CREATE TABLE IF NOT EXISTS admins(
 						user_id INTEGER PRIMARY KEY NOT NULL,
 						state TEXT NOT NULL,
 						data TEXT)""")
+
+
+
 def check_user_id(_user_id):
 	db_file = "db.db"
 	conn = None
-	check = False
 	try:
 		sql = f"""SELECT * FROM users WHERE user_id={_user_id}"""
 		conn = sqlite3.connect(db_file)
@@ -43,7 +30,6 @@ def check_user_id(_user_id):
 		if not data:
 			cur.close()
 			add_user(_user_id)
-			check = True
 		else:
 			cur.close()
 	except Exception as ex:
@@ -60,8 +46,8 @@ def add_user(_user_id):
 		sql = f"""INSERT INTO users(user_id, state, data) VALUES(?, ?, ?);"""
 		conn = sqlite3.connect(db_file)
 		cur = conn.cursor()
-		mass = {'id':'', 'categor':'', 'name':'', 'price':''}
-		cur.execute(sql, (_user_id,'start', str(mass)))
+		mass = {'paid':'False'}
+		cur.execute(sql, (_user_id,'', str(mass)))
 		conn.commit()
 		cur.close()
 	except Exception as ex:
@@ -71,6 +57,41 @@ def add_user(_user_id):
 			conn.close()
 
 
+def up_user_state(_user_id, _state):
+	db_file = "db.db"
+	conn = None
+	try:
+		sql = f"""UPDATE users SET state="{_state}" WHERE user_id={_user_id}"""
+		conn = sqlite3.connect(db_file)
+		cur = conn.cursor()
+		cur.execute(sql)
+		conn.commit()
+		cur.close()
+	except Exception as ex:
+		print('up_user_state:', ex)
+	finally:
+		if conn is not None:
+			conn.close()
+
+
+def get_user_state(_user_id):
+	db_file = "db.db"
+	conn = None
+	try:
+		sql = f"""SELECT state FROM users WHERE user_id={_user_id}"""
+		conn = sqlite3.connect(db_file)
+		cur = conn.cursor()
+		cur.execute(sql)
+		data = cur.fetchone()
+		cur.close()
+	except Exception as ex:
+		print('get_user_state:', ex)
+	finally:
+		if conn is not None:
+			conn.close()
+		return data[0]
+
+'''
 def check_user_is_admin(_user_id):
 	db_file = "db.db"
 	conn = None
@@ -351,39 +372,10 @@ def get_data(_user_id):
 		return data[0]
 
 
-def up_user_state(_user_id, _state):
-	db_file = "db.db"
-	conn = None
-	try:
-		sql = f"""UPDATE users SET state="{_state}" WHERE user_id={_user_id}"""
-		conn = sqlite3.connect(db_file)
-		cur = conn.cursor()
-		cur.execute(sql)
-		conn.commit()
-		cur.close()
-	except Exception as ex:
-		print('up_user_state:', ex)
-	finally:
-		if conn is not None:
-			conn.close()
 
 
-def get_user_state(_user_id):
-	db_file = "db.db"
-	conn = None
-	try:
-		sql = f"""SELECT state FROM users WHERE user_id={_user_id}"""
-		conn = sqlite3.connect(db_file)
-		cur = conn.cursor()
-		cur.execute(sql)
-		data = cur.fetchone()
-		cur.close()
-	except Exception as ex:
-		print('get_user_state:', ex)
-	finally:
-		if conn is not None:
-			conn.close()
-		return data[0]
 
 
+
+'''
 create_tables()
