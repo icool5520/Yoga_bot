@@ -12,7 +12,7 @@ import json
 from settings import token, imgBB_key, provider_token
 
 bot = telebot.TeleBot(token)
-
+# BAACAgIAAxkBAAMTYhPvoi63t-TUXNMiZfOAAyYwBdUAAisWAAK1bKBIgtnl4XS_MvojBA
 
 # __________________Start____________________
 @bot.message_handler(commands=['start'])
@@ -27,11 +27,68 @@ def command_start(message):
         print('command_start:', ex)
 
 
+@bot.callback_query_handler(func=lambda call: call.data == "start")
+def callback_back_btn(call):
+    try:
+        cid = call.message.chat.id
+        uid = call.from_user.id
+        db_cmd.up_user_state(uid, 'start')
+        bot.send_message(cid, "Приветствую в Yoga_bot", reply_markup=markup.gen_start_markup())
+    except Exception as ex:
+        print('callback_back_btn:', ex)
 # __________________Start_end____________________
 
 
-# __________________ADMIN____________________
-# __________________ADMIN_end___________________
+# __________________ADMIN______________________
+# __________________ADMIN_end__________________
+
+
+#__________________UserMenu____________________
+@bot.callback_query_handler(func=lambda call: call.data == "lessons")
+def callback_lessons(call):
+    try:
+        cid = call.message.chat.id
+        uid = call.from_user.id
+        if cid == uid:
+            data = db_cmd.get_data(uid)
+            data = dict(ast.literal_eval(data))
+            if data['paid'] == 'True':
+                bot.send_message(cid, "Просмотр уроков",
+                                 reply_markup=markup.gen_show_lessons_markup())
+            else:
+                bot.send_message(cid, "Внимане\nплатный контент",
+                                 reply_markup=markup.gen_lessons_not_paid_markup())
+    except Exception as ex:
+        print('callback_lessons:', ex)
+# _________________UserMenu_End________________
+
+# _________________InlineQuery_________________
+@bot.inline_handler(func=lambda query: types.InlineQuery)
+def query_lessons(inline_query):
+    try:
+        uid = inline_query.from_user.id
+        data = db_cmd.get_courses()
+        lst_inline = []
+        db_cmd.up_user_state(uid, 'inline')
+        for i in data:
+            print('i -',i)
+            text = f'Урок № {i[0]}'
+            r = types.InlineQueryResultArticle(
+                id=str(uuid4()),
+                title=text,
+                description='description',
+                thumb_url='https://i.ibb.co/7b4hG2S/yoga.jpg',
+                input_message_content=types.InputTextMessageContent(
+                    message_text=f"{text} - message_text"),
+                reply_markup=markup.gen_back_markup()
+            )
+            print('r -',r)
+            lst_inline.append(r)
+        print('lst_inline*********************\n', lst_inline)
+        bot.answer_inline_query(inline_query.id, lst_inline, 0, switch_pm_parameter='start')
+    except Exception as ex:
+        print('query_lessons:', ex)
+# __________________InlineQuery_end____________
 
 
 # __________________Payment____________________
@@ -98,9 +155,6 @@ def got_payment(message):
         new_data['paid'] = "True"
         db_cmd.up_data(uid, str(new_data))
         bot.send_message(cid, "Приветствую в Yoga_bot", reply_markup=markup.gen_start_markup())
-
-
-
 # __________________Payment_end____________________
 
 '''

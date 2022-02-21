@@ -11,6 +11,29 @@ def gen_start_markup():
     return markup
 
 
+def gen_lessons_not_paid_markup():
+    markup = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("Оплата", callback_data="payment")
+    btn2 = types.InlineKeyboardButton("<< Назад", callback_data="start")
+    markup.add(btn1)
+    markup.add(btn2)
+    return markup
+
+def gen_show_lessons_markup():
+    markup = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton(
+        "Перечень уроков", switch_inline_query_current_chat= " lessons/")
+    btn2 = types.InlineKeyboardButton("<< Назад", callback_data="start")
+    markup.add(btn1, btn2)
+    return markup
+
+
+def gen_back_markup():
+    markup = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("<< Назад", callback_data="start")
+    markup.add(btn1)
+    return markup
+
 
 
 

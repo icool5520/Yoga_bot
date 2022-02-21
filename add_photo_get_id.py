@@ -7,7 +7,7 @@ from settings import token
 
 bot = telebot.TeleBot(token)
 
-@bot.message_handler(content_types="photo")
+@bot.message_handler(content_types="video")
 def photo(m):
     cid = m.chat.id
     print(m)

@@ -15,6 +15,13 @@ def create_tables():
 						user_id INTEGER PRIMARY KEY NOT NULL,
 						state TEXT NOT NULL,
 						data TEXT)""")
+	with conn:
+		cur.execute(f"""CREATE TABLE IF NOT EXISTS videos(
+						id INTEGER PRIMARY KEY NOT NULL,
+						file_name TEXT NOT NULL,
+						file_id TEXT,
+						thumb_url TEXT)""")
+
 
 
 
@@ -125,6 +132,28 @@ def up_data(_user_id, _data):
 	finally:
 		if conn is not None:
 			conn.close()
+
+
+def get_courses():
+	db_file = "db.db"
+	conn = None
+	try:
+		sql = f"""SELECT * FROM videos"""
+		conn = sqlite3.connect(db_file)
+		cur = conn.cursor()
+		cur.execute(sql)
+		data = cur.fetchall()
+		lst_courses = []
+		#lst_categor = list(set(lst_categor))
+		#lst_courses.sort()
+		cur.close()
+	except Exception as ex:
+		print('get_courses:', ex)
+	finally:
+		if conn is not None:
+			conn.close()
+		return data
+
 '''
 def check_user_is_admin(_user_id):
 	db_file = "db.db"
