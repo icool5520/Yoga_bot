@@ -1,8 +1,8 @@
 import telebot
 from telebot import types
 from telebot.types import LabeledPrice, ShippingOption
-import telegram # from telegram import InlineQueryResultPhoto
-
+import telegram  # from telegram import InlineQueryResultPhoto
+import ast
 from uuid import uuid4
 import base64
 import requests
@@ -12,6 +12,7 @@ import json
 from settings import token, imgBB_key, provider_token
 
 bot = telebot.TeleBot(token)
+
 
 # __________________Start____________________
 @bot.message_handler(commands=['start'])
@@ -24,6 +25,8 @@ def command_start(message):
         bot.send_message(cid, "Приветствую в Yoga_bot", reply_markup=markup.gen_start_markup())
     except Exception as ex:
         print('command_start:', ex)
+
+
 # __________________Start_end____________________
 
 
@@ -32,29 +35,31 @@ def command_start(message):
 
 
 # __________________Payment____________________
-@bot.callback_query_handler(func=lambda call: call.data.startswith("pay_"))
+@bot.callback_query_handler(func=lambda call: call.data == "payment")
 def callback_pay(call):
     try:
         cid = call.message.chat.id
         uid = call.from_user.id
-        amount = 999#int(call.data[4:])
+        amount = 999  # int(call.data[4:])
         db_cmd.up_user_state(uid, "pay")
-        prices = [LabeledPrice(label="Оплата уроков йоги\n'LabeledPrice(label='", amount=int(amount)*100)]
-                #LabeledPrice('Доставка', 5000)]
+        prices = [LabeledPrice(label="Оплата уроков йоги\n'LabeledPrice(label='", amount=int(amount) * 100)]
+        # LabeledPrice('Доставка', 5000)]
         bot.send_invoice(cid, title='Видеоуроки йоги',
-                        description='Йога - это свет, который, если зажегся однажды, никогда не погаснет. Чем лучше практика, тем ярче пламя',
-                        provider_token=provider_token,
-                        currency='UAH',
-                        photo_url='https://i.ibb.co/7b4hG2S/yoga.jpg',
-                        photo_height=512,
-                        photo_width=512,
-                        photo_size=512,
-                        is_flexible=False,
-                        prices=prices,
-                        start_parameter='start',
-                        invoice_payload='H')
+                         description='Йога - это свет, который, если зажегся однажды, никогда не погаснет. Чем лучше практика, тем ярче пламя',
+                         provider_token=provider_token,
+                         currency='UAH',
+                         photo_url='https://i.ibb.co/7b4hG2S/yoga.jpg',
+                         photo_height=512,
+                         photo_width=512,
+                         photo_size=512,
+                         is_flexible=False,
+                         prices=prices,
+                         start_parameter='start',
+                         invoice_payload='H')
     except Exception as ex:
         print('callback_pay:', ex)
+
+
 '''
 shipping_options = [ShippingOption(id='instant', title='Доставка').add_price(
                    LabeledPrice('Новая почта', 10000)),
@@ -69,15 +74,33 @@ def shipping(shipping_query):
         bot.answer_shipping_query(shipping_query.id, ok=True, shipping_options=shipping_options,
                                 error_message='Ошибка доставки платежа')
 '''
+
+
+@bot.pre_checkout_query_handler(func=lambda query: True)
+def checkout(pre_checkout_query):
+    bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True,
+                                  error_message="Инопланетяне пытались украсть CVV вашей карты, но мы успешно защитили ваши учетные данные")
+
+
 @bot.message_handler(content_types=['successful_payment'])
 def got_payment(message):
     cid = message.chat.id
     uid = message.from_user.id
     state = db_cmd.get_user_state(uid)
     if state == "pay":
-        bot.send_message(cid, 'Оплата успешна Сумма:{}{}'.format(message.successful_payment.total_amount/100, message.successful_payment.currency),
-        parse_mode="Markdown")
-    # up_state_pay(uid, 'start')
+        bot.send_message(cid, 'Оплата успешна Сумма: {} {}'.format(message.successful_payment.total_amount / 100,
+                                                                 message.successful_payment.currency),
+                         parse_mode="Markdown")
+        bot.send_message(cid,"Учетная запись активирована")
+        db_cmd.up_user_state(uid, 'start')
+        data = db_cmd.get_data(uid)
+        new_data = dict(ast.literal_eval(data))
+        new_data['paid'] = "True"
+        db_cmd.up_data(uid, str(new_data))
+        bot.send_message(cid, "Приветствую в Yoga_bot", reply_markup=markup.gen_start_markup())
+
+
+
 # __________________Payment_end____________________
 
 '''
