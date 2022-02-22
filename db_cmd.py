@@ -45,6 +45,28 @@ def check_user_id(_user_id):
 		if conn is not None:
 			conn.close()
 
+def check_user_is_admin(_user_id):
+	db_file = "db.db"
+	conn = None
+	check = False
+	try:
+		sql = f"""SELECT * FROM admins WHERE user_id={_user_id}"""
+		conn = sqlite3.connect(db_file)
+		cur = conn.cursor()
+		cur.execute(sql)
+		data = cur.fetchone()
+		if data is not None:
+			cur.close()
+			check = True
+		else:
+			cur.close()
+	except Exception as ex:
+		print("check_user_is_admin", ex)
+	finally:
+		if conn is not None:
+			conn.close()
+		return check
+
 
 def add_user(_user_id):
 	db_file = "db.db"
@@ -154,6 +176,41 @@ def get_courses():
 			conn.close()
 		return data
 
+
+def get_videofile_id(_id):
+	db_file = "db.db"
+	conn = None
+	try:
+		sql = f"""SELECT file_id FROM videos WHERE id={_id}"""
+		conn = sqlite3.connect(db_file)
+		cur = conn.cursor()
+		cur.execute(sql)
+		data = cur.fetchone()
+		cur.close()
+	except Exception as ex:
+		print('get_videofile_id:', ex)
+	finally:
+		if conn is not None:
+			conn.close()
+		return data[0]
+
+
+def get_lessons_files_names():
+	db_file = "db.db"
+	conn = None
+	try:
+		sql = f"""SELECT file_name FROM videos"""
+		conn = sqlite3.connect(db_file)
+		cur = conn.cursor()
+		cur.execute(sql)
+		data = cur.fetchall()
+		cur.close()
+	except Exception as ex:
+		print('get_lessons_files_names:', ex)
+	finally:
+		if conn is not None:
+			conn.close()
+		return data
 '''
 def check_user_is_admin(_user_id):
 	db_file = "db.db"

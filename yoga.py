@@ -2,19 +2,22 @@ import telebot
 from telebot import types
 from telebot.types import LabeledPrice, ShippingOption
 import telegram  # from telegram import InlineQueryResultPhoto
+from telethon import TelegramClient
 import ast
 from uuid import uuid4
+import os
 import base64
 import requests
 import markup
 import db_cmd
 import json
-from settings import token, imgBB_key, provider_token
+from settings import token, imgBB_key, provider_token, entity, api_id, api_fash, bot_user_name
 
 bot = telebot.TeleBot(token)
+client = TelegramClient(entity, api_id, api_fash)
 # BAACAgIAAxkBAAMTYhPvoi63t-TUXNMiZfOAAyYwBdUAAisWAAK1bKBIgtnl4XS_MvojBA
 
-# __________________Start____________________
+# __________________StartMenu____________________
 @bot.message_handler(commands=['start'])
 def command_start(message):
     try:
@@ -30,20 +33,81 @@ def command_start(message):
 @bot.callback_query_handler(func=lambda call: call.data == "start")
 def callback_back_btn(call):
     try:
-        cid = call.message.chat.id
         uid = call.from_user.id
         db_cmd.up_user_state(uid, 'start')
-        bot.send_message(cid, "Приветствую в Yoga_bot", reply_markup=markup.gen_start_markup())
+        bot.send_message(uid, "Приветствую в Yoga_bot", reply_markup=markup.gen_start_markup())
     except Exception as ex:
         print('callback_back_btn:', ex)
-# __________________Start_end____________________
+# __________________StartMenu_end____________________
+
+# __________________UploadVideo____________________
+async def upload_video(files):
+    path = files
+    async with client.action(bot_user_name, "document") as action:
+        await client.send_file(bot_user_name, path, progress_callback=action.progress)
+
+@bot.message_handler(content_types=['video'])
+def add_video(message):
+    cid = message.chat.id
+    uid = message.from_user.id
+    if cid==uid:
+        print('message', message)
+
+
+# __________________UploadVideo_end_________________
 
 
 # __________________ADMIN______________________
+@bot.message_handler(commands=['admin'])
+def command_admin(message):
+    try:
+        cid = message.chat.id
+        uid = message.from_user.id
+        if cid==uid and db_cmd.check_user_is_admin(uid):
+            bot.send_message(cid, "Меню администратора\n\nПоложит новое видео в папку Video и нажмите кнопку добавить",
+                             reply_markup=markup.gen_admin_markup())
+        elif cid == uid and not db_cmd.check_user_is_admin(uid):
+            bot.send_message(cid, "Права администратора отсутствуют\nНажмите /start для продолжения")
+    except Exception as ex:
+        print('start_msg:', ex)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "admin")
+def callback_main_menu(call):
+    try:
+        cid = call.message.chat.id
+        uid = call.from_user.id
+        if cid==uid and db_cmd.check_user_is_admin(uid):
+            bot.send_message(cid, "Меню администратора", reply_markup=markup.gen_admin_markup())
+    except Exception as ex:
+        print('callback_main_menu:', ex)
+
+@bot.callback_query_handler(func=lambda call: call.data == "add")
+def callback_main_menu(call):
+    try:
+        cid = call.message.chat.id
+        uid = call.from_user.id
+        if cid==uid and db_cmd.check_user_is_admin(uid):
+            list_dir = os.listdir(path="./Video/")
+            list_lessons = list(map(lambda x : x[0], db_cmd.get_lessons_files_names()))
+            print(list_dir)
+            print(list_lessons)
+            for i in range(len(list_dir)):
+                if list_dir[i] not in list_lessons:
+                    path = f'./Video/{list_dir[i]}'
+                    with client:
+                        client.loop.run_until_complete(upload_video(path))
+            bot.send_message(cid, "Меню администратора(видео добавилось)", reply_markup=markup.gen_admin_markup())
+    except Exception as ex:
+        print('callback_main_menu:', ex)
+
+
+
+
 # __________________ADMIN_end__________________
 
 
-#__________________UserMenu____________________
+# __________________UserMenu____________________
 @bot.callback_query_handler(func=lambda call: call.data == "lessons")
 def callback_lessons(call):
     try:
@@ -60,7 +124,19 @@ def callback_lessons(call):
                                  reply_markup=markup.gen_lessons_not_paid_markup())
     except Exception as ex:
         print('callback_lessons:', ex)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('video'))
+def callback_video(call):
+    try:
+        uid = call.from_user.id
+        video_id = call.data.split('_')[1]
+        videofile_id = db_cmd.get_videofile_id(video_id)
+        bot.send_video(uid, videofile_id)
+    except Exception as ex:
+        print('callback_video:', ex)
 # _________________UserMenu_End________________
+
 
 # _________________InlineQuery_________________
 @bot.inline_handler(func=lambda query: types.InlineQuery)
@@ -71,7 +147,7 @@ def query_lessons(inline_query):
         lst_inline = []
         db_cmd.up_user_state(uid, 'inline')
         for i in data:
-            print('i -',i)
+            video_id = i[0]
             text = f'Урок № {i[0]}'
             r = types.InlineQueryResultArticle(
                 id=str(uuid4()),
@@ -79,13 +155,12 @@ def query_lessons(inline_query):
                 description='description',
                 thumb_url='https://i.ibb.co/7b4hG2S/yoga.jpg',
                 input_message_content=types.InputTextMessageContent(
-                    message_text=f"{text} - message_text"),
-                reply_markup=markup.gen_back_markup()
+                    message_text=f"{text} - message_text", parse_mode=''),
+                reply_markup=markup.gen_watch_video_markup(video_id)
             )
-            print('r -',r)
             lst_inline.append(r)
-        print('lst_inline*********************\n', lst_inline)
         bot.answer_inline_query(inline_query.id, lst_inline, 0, switch_pm_parameter='start')
+        # bot.send_video()
     except Exception as ex:
         print('query_lessons:', ex)
 # __________________InlineQuery_end____________
@@ -117,22 +192,6 @@ def callback_pay(call):
         print('callback_pay:', ex)
 
 
-'''
-shipping_options = [ShippingOption(id='instant', title='Доставка').add_price(
-                   LabeledPrice('Новая почта', 10000)),
-                   ShippingOption(id='pickup', title='Доставка по городу').add_price(
-                   LabeledPrice('Курьер', 5000))]
-
-@bot.shipping_query_handler(func=lambda query: True)
-def shipping(shipping_query):
-    uid = shipping_query.from_user.id
-    state = db_cmd.get_user_state(uid)
-    if state == "pay":
-        bot.answer_shipping_query(shipping_query.id, ok=True, shipping_options=shipping_options,
-                                error_message='Ошибка доставки платежа')
-'''
-
-
 @bot.pre_checkout_query_handler(func=lambda query: True)
 def checkout(pre_checkout_query):
     bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True,
@@ -146,9 +205,9 @@ def got_payment(message):
     state = db_cmd.get_user_state(uid)
     if state == "pay":
         bot.send_message(cid, 'Оплата успешна Сумма: {} {}'.format(message.successful_payment.total_amount / 100,
-                                                                 message.successful_payment.currency),
+                                                                   message.successful_payment.currency),
                          parse_mode="Markdown")
-        bot.send_message(cid,"Учетная запись активирована")
+        bot.send_message(cid, "Учетная запись активирована")
         db_cmd.up_user_state(uid, 'start')
         data = db_cmd.get_data(uid)
         new_data = dict(ast.literal_eval(data))
@@ -156,6 +215,14 @@ def got_payment(message):
         db_cmd.up_data(uid, str(new_data))
         bot.send_message(cid, "Приветствую в Yoga_bot", reply_markup=markup.gen_start_markup())
 # __________________Payment_end____________________
+
+
+
+
+
+
+
+
 
 '''
 @bot.message_handler(commands=['start'])
