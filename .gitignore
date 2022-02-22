@@ -1,3 +1,5 @@
 /venv/
 /.idea/
 settings.py
+token.pkl
+client_secret.json
